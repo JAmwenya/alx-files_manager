@@ -31,7 +31,7 @@ class DBClient {
   // Check if the connection is alive
   async isAlive() {
     if (!this.db) {
-      await this.connect(); 
+      await this.connect();
     }
     try {
       const result = await this.db.command({ ping: 1 });
