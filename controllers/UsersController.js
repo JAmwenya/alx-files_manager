@@ -1,10 +1,9 @@
 // controllers/UsersController.js
 
-import dbClient from '../utils/db.js';
 import crypto from 'crypto';
+import dbClient from '../utils/db';
 
 class UsersController {
-
   // POST /users: Create a new user
   static async postNew(req, res) {
     try {
@@ -24,29 +23,33 @@ class UsersController {
       }
 
       // Check if the email already exists in the database
-      const existingUser = await dbClient.db.collection('users').findOne({ email });
+      const existingUser = await dbClient.db
+        .collection('users')
+        .findOne({ email });
       if (existingUser) {
         return res.status(400).json({ error: 'Already exist' });
       }
 
       // Hash the password using SHA1
-      const hashedPassword = crypto.createHash('sha1').update(password).digest('hex');
+      const hashedPassword = crypto
+        .createHash('sha1')
+        .update(password)
+        .digest('hex');
 
       // Insert the new user into the 'users' collection
       const result = await dbClient.db.collection('users').insertOne({
         email,
-        password: hashedPassword
+        password: hashedPassword,
       });
 
       // Return the newly created user with only the email and id
-      res.status(201).json({
+      return res.status(201).json({
         id: result.insertedId,
-        email
-      });
-
+        email,
+      }); // Add 'return' to ensure no further execution after this point
     } catch (error) {
-      console.error('Error creating user:', error);  // Log detailed error
-      res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Error creating user:', error); // Log detailed error
+      return res.status(500).json({ error: 'Internal Server Error' }); // Ensure that 'return' is added here as well
     }
   }
 }
