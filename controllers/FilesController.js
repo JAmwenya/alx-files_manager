@@ -3,16 +3,14 @@
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { ObjectId } from 'mongodb'; // Import ObjectId from mongodb
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
 class FilesController {
   // POST /files: Upload file and store in DB and disk
   static async postUpload(req, res) {
-    const {
-      name, type, data, parentId, isPublic,
-    } = req.body;
+    const { name, type, data, parentId, isPublic } = req.body;
     const token = req.headers['x-token'];
 
     // Check for valid token
@@ -33,13 +31,11 @@ class FilesController {
 
     // Retrieve the user ID from Redis
     const userId = await redisClient.get(`auth_${token}`);
-
+    
     // Validate the parent folder if parentId is provided
     let parent = null;
     if (parentId) {
-      parent = await dbClient.db
-        .collection('files')
-        .findOne({ _id: new ObjectId(parentId), userId });
+      parent = await dbClient.db.collection('files').findOne({ _id: new ObjectId(parentId), userId });
       if (!parent) {
         return res.status(400).json({ error: 'Parent not found' });
       }
@@ -79,7 +75,7 @@ class FilesController {
   // GET /files/:id: Retrieve file information by ID
   static async getShow(req, res) {
     const token = req.headers['x-token'];
-
+    
     // Check for valid token
     if (!token || !(await redisClient.get(`auth_${token}`))) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -88,15 +84,40 @@ class FilesController {
     try {
       const fileId = new ObjectId(req.params.id);
       const userId = await redisClient.get(`auth_${token}`);
-      const file = await dbClient.db
-        .collection('files')
-        .findOne({ _id: fileId, userId });
+      const file = await dbClient.db.collection('files').findOne({ _id: fileId, userId });
 
       if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
 
       return res.status(200).json(file);
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+
+  // GET /files: List files with pagination and optional parentId filter
+  static async getIndex(req, res) {
+    const token = req.headers['x-token'];
+    
+    // Check for valid token
+    if (!token || !(await redisClient.get(`auth_${token}`))) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const userId = await redisClient.get(`auth_${token}`);
+      const { parentId = 0, page = 0 } = req.query;
+      const limit = 20;
+      const skip = page * limit;
+
+      // Find files based on parentId with pagination
+      const files = await dbClient.db.collection('files').find({ userId, parentId: new ObjectId(parentId) })
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      return res.status(200).json(files);
     } catch (error) {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
