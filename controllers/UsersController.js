@@ -1,44 +1,56 @@
-import crypto from "crypto";
+// controllers/UsersController.js
+
 import dbClient from "../utils/db.js";
+import crypto from "crypto"; 
 
 class UsersController {
+	// POST /users: Create a new user
 	static async postNew(req, res) {
-		const { email, password } = req.body;
-		if (!email) {
-			return res.status(400).json({ error: "Missing email" });
-		}
-		if (!password) {
-			return res.status(400).json({ error: "Missing password" });
-		}
+		try {
+			const { email, password } = req.body;
 
-		const existingUser = await dbClient.db
-			.collection("users")
-			.findOne({ email });
-		if (existingUser) {
-			return res.status(400).json({ error: "Already exist" });
+			// Check if email and password are provided
+			if (!email) {
+				return res.status(400).json({ error: "Missing email" });
+			}
+			if (!password) {
+				return res.status(400).json({ error: "Missing password" });
+			}
+
+			// Ensure the database connection is established
+			if (!dbClient.db) {
+				await dbClient.connect();
+			}
+
+			// Check if the email already exists in the database
+			const existingUser = await dbClient.db
+				.collection("users")
+				.findOne({ email });
+			if (existingUser) {
+				return res.status(400).json({ error: "Already exist" });
+			}
+
+			// Hash the password using SHA1
+			const hashedPassword = crypto
+				.createHash("sha1")
+				.update(password)
+				.digest("hex");
+
+			// Insert the new user into the 'users' collection
+			const result = await dbClient.db.collection("users").insertOne({
+				email,
+				password: hashedPassword,
+			});
+
+			// Return the newly created user with only the email and id
+			res.status(201).json({
+				id: result.insertedId,
+				email,
+			});
+		} catch (error) {
+			console.error("Error creating user:", error);
+			res.status(500).json({ error: "Internal Server Error" });
 		}
-
-		const hashedPassword = crypto
-			.createHash("sha1")
-			.update(password)
-			.digest("hex");
-		const user = await dbClient.db
-			.collection("users")
-			.insertOne({ email, password: hashedPassword });
-		res.status(201).json({ id: user.insertedId, email });
-	}
-
-	static async getMe(req, res) {
-		const token = req.headers["x-token"];
-		const userId = await redisClient.get(`auth_${token}`);
-		if (!userId) {
-			return res.status(401).json({ error: "Unauthorized" });
-		}
-
-		const user = await dbClient.db
-			.collection("users")
-			.findOne({ _id: new ObjectId(userId) });
-		res.status(200).json({ id: user._id, email: user.email });
 	}
 }
 
