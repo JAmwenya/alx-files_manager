@@ -19,7 +19,7 @@ class UsersController {
 
       // Ensure the database connection is established
       if (!dbClient.db) {
-        await dbClient.connect(); // Wait for the connection to be established
+        await dbClient.connect();
       }
 
       // Check if the email already exists in the database
@@ -46,10 +46,10 @@ class UsersController {
       return res.status(201).json({
         id: result.insertedId,
         email,
-      }); // Add 'return' to ensure no further execution after this point
+      }); // Ensure no further execution after this point
     } catch (error) {
-      console.error('Error creating user:', error); // Log detailed error
-      return res.status(500).json({ error: 'Internal Server Error' }); // Ensure that 'return' is added here as well
+      console.error('Error creating user:', error);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 }
