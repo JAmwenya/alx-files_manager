@@ -1,8 +1,11 @@
+// controller/FilesController.js
+
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
-import dbClient from "../utils/db.js";
-import redisClient from "../utils/redis.js";
+import { ObjectId } from "mongodb"; // Import ObjectId from mongodb
+import dbClient from "../utils/db";
+import redisClient from "../utils/redis";
 
 class FilesController {
 	static async postUpload(req, res) {
@@ -46,16 +49,19 @@ class FilesController {
 			fs.writeFileSync(filePath, fileBuffer);
 		}
 
-		const file = await dbClient.db.collection("files").insertOne({
-			userId,
-			name,
-			type,
-			parentId: parentId || 0,
-			isPublic: isPublic || false,
-			localPath: filePath,
-		});
-
-		res.status(201).json(file.ops[0]);
+		try {
+			const file = await dbClient.db.collection("files").insertOne({
+				userId,
+				name,
+				type,
+				parentId: parentId || 0,
+				isPublic: isPublic || false,
+				localPath: filePath,
+			});
+			return res.status(201).json(file.ops[0]); // Always return the response
+		} catch (error) {
+			return res.status(500).json({ error: "Internal Server Error" });
+		}
 	}
 
 	static async getShow(req, res) {
@@ -64,17 +70,22 @@ class FilesController {
 			return res.status(401).json({ error: "Unauthorized" });
 		}
 
-		const file = await dbClient.db
-			.collection("files")
-			.findOne({ _id: new ObjectId(req.params.id) });
-		if (
-			!file ||
-			file.userId !== new ObjectId(await redisClient.get(`auth_${token}`))
-		) {
-			return res.status(404).json({ error: "Not found" });
-		}
+		try {
+			const file = await dbClient.db
+				.collection("files")
+				.findOne({ _id: new ObjectId(req.params.id) });
 
-		res.status(200).json(file);
+			if (
+				!file ||
+				file.userId !== new ObjectId(await redisClient.get(`auth_${token}`))
+			) {
+				return res.status(404).json({ error: "Not found" });
+			}
+
+			return res.status(200).json(file); // Always return the response
+		} catch (error) {
+			return res.status(500).json({ error: "Internal Server Error" });
+		}
 	}
 }
 
