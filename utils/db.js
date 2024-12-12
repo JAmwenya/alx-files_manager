@@ -28,24 +28,24 @@ class DBClient {
     }
   }
 
-  // Check if the connection is alive
-  async isAlive() {
-    if (!this.db) {
-      await this.connect();
-    }
-    try {
-      const result = await this.db.command({ ping: 1 });
-      return result.ok === 1;
-    } catch (error) {
-      console.error('Ping failed:', error);
-      return false;
-    }
-  }
+	// Check if the connection is alive
+	async isAlive() {
+		if (!this.db) {
+			await this.connect();
+		}
+		try {
+			const result = await this.db.command({ ping: 1 });
+			return result.ok === 1 ? 1 : 0;
+		} catch (error) {
+			console.error("Ping failed:", error);
+			return 0;
+		}
+	}
 
   // Get the number of users in the collection
   async nbUsers() {
     if (!this.db) {
-      await this.connect(); // Ensure the connection is established before querying
+      await this.connect();
     }
     try {
       const usersCollection = this.db.collection('users');
