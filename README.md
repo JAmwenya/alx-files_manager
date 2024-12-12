@@ -1,0 +1,1 @@
+This directory contains solutions on questions from a summary of my back-end trimester: authentication, NodeJS, MongoDB, Redis, pagination and background processing.
